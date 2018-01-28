@@ -2,25 +2,31 @@
  * Serhii Nykyforov
  */
 const TRIANGLE_SIZE = 7;
+const UNIT = '#';
 var output = '';
 
-// first variant
+// FOR first variant
 for (var i = 0; i < TRIANGLE_SIZE; i++) {
-    output += '#';
+    output += UNIT;
     console.log(output);
 }
 
+// FOR second variant
+for (var line = ''; line.length <= TRIANGLE_SIZE;) {
+    console.log(line += UNIT);
+}
 
-// second variant
+
+// WHILE variant
 output = '';
 while (output.length < TRIANGLE_SIZE) {
-    output += '#';
+    output += UNIT;
     console.log(output);
 }
 
 
-// third variant
+// DO WHILE variant
 output = '';
 do {
     console.log(output);
-} while (output.length < TRIANGLE_SIZE && (output += '#'));
+} while (output.length < TRIANGLE_SIZE && (output += UNIT));
