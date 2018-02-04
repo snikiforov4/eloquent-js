@@ -123,3 +123,31 @@ function goalOrientedRobot({place, parcels}, route) {
     }
     return {direction: route[0], memory: route.slice(1)};
 }
+
+// Measuring a robot
+function compareRobots(robot1, memory1, robot2, memory2) {
+    function calcEfficiency(state, robot, memory) {
+        for (let turn = 0;; turn++) {
+            if (state.parcels.length === 0) {
+                return turn;
+            }
+            let action = robot(state, memory);
+            state = state.move(action.direction);
+            memory = action.memory;
+        }
+    }
+
+    const TESTS_NUMBER = 100;
+    let robot1TurnsSum = 0;
+    let robot2TurnsSum = 0;
+    for  (let task = 0; task < TESTS_NUMBER; task++) {
+        let state = VillageState.random();
+        robot1TurnsSum += calcEfficiency(state, robot1, memory1);
+        robot2TurnsSum += calcEfficiency(state, robot2, memory2);
+    }
+    console.log(`Robot#1 avg turns: ${robot1TurnsSum / TESTS_NUMBER}`);
+    console.log(`Robot#2 avg turns: ${robot2TurnsSum / TESTS_NUMBER}`);
+}
+
+compareRobots(routeRobot, [], goalOrientedRobot, []);
+
