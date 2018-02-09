@@ -124,6 +124,16 @@ function goalOrientedRobot({place, parcels}, route) {
     return {direction: route[0], memory: route.slice(1)};
 }
 
+function efficientRobot({place, parcels}, route) {
+    if (route.length === 0) {
+        route = parcels
+            .map(parcel => findRoute(roadGraph, place, parcel.place !== place ? parcel.place : parcel.address))
+            .filter(route => route.length > 0)
+            .reduce((p, c) => p.length > c.length ? c : p);
+    }
+    return {direction: route[0], memory: route.slice(1)};
+}
+
 // Measuring a robot
 function compareRobots(robot1, memory1, robot2, memory2) {
     function calcEfficiency(state, robot, memory) {
@@ -149,5 +159,4 @@ function compareRobots(robot1, memory1, robot2, memory2) {
     console.log(`Robot#2 avg turns: ${robot2TurnsSum / TESTS_NUMBER}`);
 }
 
-compareRobots(routeRobot, [], goalOrientedRobot, []);
-
+compareRobots(goalOrientedRobot, [], efficientRobot, []);
