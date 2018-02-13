@@ -9,11 +9,13 @@ function storage(nest, name) {
     });
 }
 
-const Timeout = class Timeout extends Error {};
+const Timeout = class Timeout extends Error {
+};
 
 function request(nest, target, type, content) {
     return new Promise((resolve, reject) => {
         let done = false;
+
         function attempt(n) {
             nest.send(target, type, content, (failed, value) => {
                 done = true;
@@ -26,6 +28,7 @@ function request(nest, target, type, content) {
                 else reject(new Timeout("Timed out"));
             }, 250);
         }
+
         attempt(1);
     });
 }
@@ -59,7 +62,7 @@ everywhere(nest => {
     nest.state.gossip = [];
 });
 
-function sendGossip(nest, message, exceptFor=null) {
+function sendGossip(nest, message, exceptFor = null) {
     nest.state.gossip.push(message);
     for (let neighbor of nest.neighbors) {
         if (neighbor === exceptFor) continue;
@@ -83,7 +86,7 @@ requestType("connections", (nest, {name, neighbors},
     broadcastConnections(nest, name, source);
 });
 
-function broadcastConnections(nest, name, exceptFor=null) {
+function broadcastConnections(nest, name, exceptFor = null) {
     for (let neighbor of nest.neighbors) {
         if (neighbor === exceptFor) continue;
         request(nest, neighbor, "connections", {
@@ -144,6 +147,7 @@ function network(nest) {
 
 function findInRemoteStorage(nest, name) {
     let sources = network(nest).filter(n => n !== nest.name);
+
     function next() {
         if (sources.length === 0) {
             return Promise.reject(new Error("Not found"));
@@ -155,6 +159,7 @@ function findInRemoteStorage(nest, name) {
                 .then(value => value != null ? value : next(), next);
         }
     }
+
     return next();
 }
 

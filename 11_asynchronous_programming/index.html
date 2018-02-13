@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>A Robot</title>
+    <title>Locate Scalpel</title>
 </head>
 <script src="crows.js"></script>
 <script src="async.js"></script>
@@ -12,6 +12,23 @@
 </body>
 
 <script>
-    chicks(bigOak, 2017).then(console.log);
+    async function locateScalpelAsync(nest) {
+        let nestName = nest.name;
+        for (let scalpelLocation; ; nestName = scalpelLocation) {
+            scalpelLocation = (await anyStorage(nest, nestName, 'scalpel'));
+            if (nestName === scalpelLocation) return nestName;
+        }
+    }
+
+    function locateScalpel(nest) {
+        function next(nestName) {
+            return anyStorage(nest, nestName, 'scalpel')
+                .then(value => value === nestName ? nestName : next(value));
+        }
+
+        return next(nest.name);
+    }
+
+    locateScalpel(bigOak).then(console.log);
 </script>
 </html>
