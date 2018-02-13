@@ -21,8 +21,8 @@ function request(nest, target, type, content) {
                 else resolve(value);
             });
             setTimeout(() => {
-                if (done)
-                else if (n < 3) attempt(n + 1);
+                if (done) return;
+                if (n < 3) attempt(n + 1);
                 else reject(new Timeout("Timed out"));
             }, 250);
         }
