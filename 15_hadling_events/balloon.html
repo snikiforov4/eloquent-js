@@ -1,0 +1,39 @@
+<!doctype html>
+<head>
+    <meta charset="utf-8">
+</head>
+<body>
+    <p>🎈</p>
+</body>
+
+<script>
+    let balloon = document.querySelector('p');
+    balloon.style.fontSize = '20px';
+    const THRESHOLD = 50;
+    const EXPLOSION = '💥';
+
+    function getCurrentBalloonSize() {
+        let style = window.getComputedStyle(balloon, null).getPropertyValue('font-size');
+        return parseFloat(style);
+    }
+
+    let balloonUpdater = event => {
+        switch (event.key) {
+            case 'ArrowUp':
+                let newSize = getCurrentBalloonSize() * 1.1;
+                if (newSize > THRESHOLD) {
+                    balloon.textContent = EXPLOSION;
+                    removeEventListener("keydown", balloonUpdater);
+                } else {
+                    balloon.style.fontSize = newSize + 'px';
+                }
+                event.preventDefault();
+                break;
+            case 'ArrowDown':
+                balloon.style.fontSize = (getCurrentBalloonSize() * 0.9) + 'px';
+                event.preventDefault();
+                break;
+        }
+    };
+    addEventListener("keydown", balloonUpdater);
+</script>

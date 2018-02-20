@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        .trail { /* className for the trail elements */
+            position: absolute;
+            height: 12px; width: 12px;
+            border-radius: 3px;
+            background: teal;
+        }
+        body {
+            height: 300px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="trail"></div>
+
+<script>
+
+    let listener = event => {
+
+    };
+    let dots = [];
+    for (let i = 0; i < 10; i++) {
+        let dot = document.createElement("div");
+        dot.className = "trail";
+        dot.style.left = (Math.random() * 300) + "px";
+        dot.style.top = (Math.random() * 300) + "px";
+        document.body.appendChild(dot);
+        dots.push(dot);
+        dot.addEventListener("mousemove", listener);
+    }
+</script>
+
+
+</body>
+</html>
