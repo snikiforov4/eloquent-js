@@ -5,7 +5,7 @@
     <style>
         .trail { /* className for the trail elements */
             position: absolute;
-            height: 12px; width: 12px;
+            height: 6px; width: 6px;
             border-radius: 3px;
             background: teal;
         }
@@ -16,23 +16,22 @@
 </head>
 <body>
 
-<div class="trail"></div>
-
 <script>
-
-    let listener = event => {
-
-    };
+    const TRAIL_LENGTH = 10;
     let dots = [];
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < TRAIL_LENGTH; i++) {
         let dot = document.createElement("div");
         dot.className = "trail";
-        dot.style.left = (Math.random() * 300) + "px";
-        dot.style.top = (Math.random() * 300) + "px";
         document.body.appendChild(dot);
         dots.push(dot);
-        dot.addEventListener("mousemove", listener);
     }
+
+    let currentIdx = 0;
+    addEventListener("mousemove", event => {
+        dots[currentIdx].style.left = `${event.pageX}px`;
+        dots[currentIdx].style.top = `${event.pageY}px`;
+        currentIdx = ++currentIdx < TRAIL_LENGTH ? currentIdx : 0;
+    });
 </script>
 
 
