@@ -349,11 +349,19 @@ function runLevel(level, Display) {
   });
 }
 
+const INIT_LIVES = 3;
+
 async function runGame(plans, Display) {
-  for (let level = 0; level < plans.length;) {
-    let status = await runLevel(new Level(plans[level]),
-                                Display);
-    if (status === "won") level++;
-  }
-  console.log("You've won!");
+    let lives = INIT_LIVES;
+    for (let level = 0; level < plans.length && lives > 0;) {
+        console.log(`Level ${level + 1}, Lives: ${lives}`);
+        let status = await runLevel(new Level(plans[level]), Display);
+        if (status === "won") level++;
+        else lives--;
+    }
+    if (lives > 0) {
+        console.log("You've won!");
+    } else {
+        console.log("GAME OVER!1!!");
+    }
 }
