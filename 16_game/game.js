@@ -299,20 +299,27 @@ Player.prototype.update = function(time, state, keys) {
 };
 
 function trackKeys(keys) {
-  let down = Object.create(null);
-  function track(event) {
-    if (keys.includes(event.key)) {
-      down[event.key] = event.type === "keydown";
-      event.preventDefault();
+    let down = Object.create(null);
+
+    function track(event) {
+        if (keys.includes(event.key)) {
+            down[event.key] = event.type === "keydown";
+            event.preventDefault();
+        }
     }
-  }
-  window.addEventListener("keydown", track);
-  window.addEventListener("keyup", track);
-  return down;
+
+    down.register = function () {
+        window.addEventListener("keydown", track);
+        window.addEventListener("keyup", track);
+    };
+    down.unregister = function () {
+        window.removeEventListener("keydown", track);
+        window.removeEventListener("keyup", track);
+    };
+    return down;
 }
 
-let arrowKeys =
-  trackKeys(["ArrowLeft", "ArrowRight", "ArrowUp"]);
+let trackedKeys = trackKeys(["ArrowLeft", "ArrowRight", "ArrowUp", "Escape"]);
 
 function runAnimation(frameFunc) {
   let lastTime = null;
@@ -328,25 +335,34 @@ function runAnimation(frameFunc) {
 }
 
 function runLevel(level, Display) {
-  let display = new Display(document.body, level);
-  let state = State.start(level);
-  let ending = 1;
-  return new Promise(resolve => {
-    runAnimation(time => {
-      state = state.update(time, arrowKeys);
-      display.setState(state);
-      if (state.status === "playing") {
-        return true;
-      } else if (ending > 0) {
-        ending -= time;
-        return true;
-      } else {
-        display.clear();
-        resolve(state.status);
-        return false;
-      }
+    let display = new Display(document.body, level);
+    let state = State.start(level);
+    let ending = 1;
+    let paused = false;
+    trackedKeys.register();
+    return new Promise(resolve => {
+        runAnimation(time => {
+            if (trackedKeys.Escape) {
+                trackedKeys.Escape = false;
+                paused = !paused;
+                console.log(`Game has been ${paused ? "" : "un"}paused`);
+            }
+            if (paused) return true;
+            state = state.update(time, trackedKeys);
+            display.setState(state);
+            if (state.status === "playing") {
+                return true;
+            } else if (ending > 0) {
+                ending -= time;
+                return true;
+            } else {
+                display.clear();
+                trackedKeys.unregister();
+                resolve(state.status);
+                return false;
+            }
+        });
     });
-  });
 }
 
 const INIT_LIVES = 3;
@@ -356,8 +372,11 @@ async function runGame(plans, Display) {
     for (let level = 0; level < plans.length && lives > 0;) {
         console.log(`Level ${level + 1}, Lives: ${lives}`);
         let status = await runLevel(new Level(plans[level]), Display);
-        if (status === "won") level++;
-        else lives--;
+        if (status === "won") {
+            level++;
+        } else {
+            lives--;
+        }
     }
     if (lives > 0) {
         console.log("You've won!");
