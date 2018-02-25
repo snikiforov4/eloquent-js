@@ -4,6 +4,7 @@
 .background td { padding: 0;          }
 .lava          { background: rgb(255, 100, 100); }
 .wall          { background: white;   }
+.monster       { background: purple }
 
 .actor  { position: absolute;  }
 .coin   { background: rgb(241, 229, 89); }
