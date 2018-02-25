@@ -5,18 +5,6 @@ const JUMP_SPEED = 17;
 const SCALE = 20;
 const INIT_LIVES = 3;
 
-const simpleLevelPlan = `
-......................
-..#................#..
-..#..............=.#..
-..#.........o.o....#..
-..#.@......#####...#..
-..#####............#..
-......#++++++++++++#..
-......##############..
-......................`;
-
-
 let Vec = class Vec {
     constructor(x, y) {
         this.x = x; this.y = y;
@@ -34,6 +22,12 @@ function overlap(actor1, actor2) {
         actor1.pos.x < actor2.pos.x + actor2.size.x &&
         actor1.pos.y + actor1.size.y > actor2.pos.y &&
         actor1.pos.y < actor2.pos.y + actor2.size.y;
+}
+
+function flipHorizontally(context, around) {
+    context.translate(around, 0);
+    context.scale(-1, 1);
+    context.translate(-around, 0);
 }
 
 let Level = class Level {
@@ -270,82 +264,215 @@ let levelChars = {
     "M": Monster
 };
 
-let simpleLevel = new Level(simpleLevelPlan);
-
 function elt(name, attrs, ...children) {
-  let dom = document.createElement(name);
-  for (let attr of Object.keys(attrs)) {
-    dom.setAttribute(attr, attrs[attr]);
-  }
-  for (let child of children) {
-    dom.appendChild(child);
-  }
-  return dom;
+    let dom = document.createElement(name);
+    for (let attr of Object.keys(attrs)) {
+        dom.setAttribute(attr, attrs[attr]);
+    }
+    for (let child of children) {
+        dom.appendChild(child);
+    }
+    return dom;
 }
 
 let DOMDisplay = class DOMDisplay {
-  constructor(parent, level) {
-    this.dom = elt("div", {class: "game"}, drawGrid(level));
-    this.actorLayer = null;
-    parent.appendChild(this.dom);
-  }
+    constructor(parent, level) {
+        this.dom = elt("div", {class: "game"}, this.drawGrid(level));
+        this.actorLayer = null;
+        parent.appendChild(this.dom);
+    }
 
-  clear() { this.dom.remove(); }
+    drawGrid(level) {
+        return elt("table", {
+            class: "background",
+            style: `width: ${level.width * SCALE}px`
+        }, ...level.rows.map(row =>
+            elt("tr", {style: `height: ${SCALE}px`},
+                ...row.map(type => elt("td", {class: type})))
+        ));
+    }
+
+    clear() {
+        this.dom.remove();
+    }
+
+    setState(state) {
+        if (this.actorLayer) this.actorLayer.remove();
+        this.actorLayer = this.drawActors(state.actors);
+        this.dom.appendChild(this.actorLayer);
+        this.dom.className = `game ${state.status}`;
+        this.scrollPlayerIntoView(state);
+    };
+
+    drawActors(actors) {
+        return elt("div", {}, ...actors.map(actor => {
+            let rect = elt("div", {class: `actor ${actor.type}`});
+            rect.style.width = `${actor.size.x * SCALE}px`;
+            rect.style.height = `${actor.size.y * SCALE}px`;
+            rect.style.left = `${actor.pos.x * SCALE}px`;
+            rect.style.top = `${actor.pos.y * SCALE}px`;
+            return rect;
+        }));
+    }
+
+    scrollPlayerIntoView(state) {
+        let width = this.dom.clientWidth;
+        let height = this.dom.clientHeight;
+        let margin = width / 3;
+
+        // The viewport
+        let left = this.dom.scrollLeft, right = left + width;
+        let top = this.dom.scrollTop, bottom = top + height;
+
+        let player = state.player;
+        let center = player.pos.plus(player.size.times(0.5))
+            .times(SCALE);
+
+        if (center.x < left + margin) {
+            this.dom.scrollLeft = center.x - margin;
+        } else if (center.x > right - margin) {
+            this.dom.scrollLeft = center.x + margin - width;
+        }
+        if (center.y < top + margin) {
+            this.dom.scrollTop = center.y - margin;
+        } else if (center.y > bottom - margin) {
+            this.dom.scrollTop = center.y + margin - height;
+        }
+    };
 };
 
-function drawGrid(level) {
-  return elt("table", {
-    class: "background",
-    style: `width: ${level.width * SCALE}px`
-  }, ...level.rows.map(row =>
-    elt("tr", {style: `height: ${SCALE}px`},
-        ...row.map(type => elt("td", {class: type})))
-  ));
-}
 
-function drawActors(actors) {
-  return elt("div", {}, ...actors.map(actor => {
-    let rect = elt("div", {class: `actor ${actor.type}`});
-    rect.style.width = `${actor.size.x * SCALE}px`;
-    rect.style.height = `${actor.size.y * SCALE}px`;
-    rect.style.left = `${actor.pos.x * SCALE}px`;
-    rect.style.top = `${actor.pos.y * SCALE}px`;
-    return rect;
-  }));
-}
+let otherSprites = document.createElement("img");
+otherSprites.src = "img/sprites.png";
 
-DOMDisplay.prototype.setState = function(state) {
-  if (this.actorLayer) this.actorLayer.remove();
-  this.actorLayer = drawActors(state.actors);
-  this.dom.appendChild(this.actorLayer);
-  this.dom.className = `game ${state.status}`;
-  this.scrollPlayerIntoView(state);
+let playerSprites = document.createElement("img");
+playerSprites.src = "img/player.png";
+const playerXOverlap = 4;
+
+let CanvasDisplay = class CanvasDisplay {
+    constructor(parent, level) {
+        this.canvas = document.createElement("canvas");
+        this.canvas.width = Math.min(600, level.width * SCALE);
+        this.canvas.height = Math.min(450, level.height * SCALE);
+        parent.appendChild(this.canvas);
+        this.cx = this.canvas.getContext("2d");
+
+        this.flipPlayer = false;
+
+        this.viewport = {
+            left: 0,
+            top: 0,
+            width: this.canvas.width / SCALE,
+            height: this.canvas.height / SCALE
+        };
+    }
+
+    clear() {
+        this.canvas.remove();
+    }
+
+    setState(state) {
+        this.updateViewport(state);
+        this.clearDisplay(state.status);
+        this.drawBackground(state.level);
+        this.drawActors(state.actors);
+    };
+
+    updateViewport(state) {
+        let view = this.viewport, margin = view.width / 3;
+        let player = state.player;
+        let center = player.pos.plus(player.size.times(0.5));
+
+        if (center.x < view.left + margin) {
+            view.left = Math.max(center.x - margin, 0);
+        } else if (center.x > view.left + view.width - margin) {
+            view.left = Math.min(center.x + margin - view.width,
+                state.level.width - view.width);
+        }
+        if (center.y < view.top + margin) {
+            view.top = Math.max(center.y - margin, 0);
+        } else if (center.y > view.top + view.height - margin) {
+            view.top = Math.min(center.y + margin - view.height,
+                state.level.height - view.height);
+        }
+    }
+
+    clearDisplay(status) {
+        if (status === "won") {
+            this.cx.fillStyle = "rgb(68, 191, 255)";
+        } else if (status === "lost") {
+            this.cx.fillStyle = "rgb(44, 136, 214)";
+        } else {
+            this.cx.fillStyle = "rgb(52, 166, 251)";
+        }
+        this.cx.fillRect(0, 0,
+            this.canvas.width, this.canvas.height);
+    }
+
+    drawBackground(level) {
+        let {left, top, width, height} = this.viewport;
+        let xStart = Math.floor(left);
+        let xEnd = Math.ceil(left + width);
+        let yStart = Math.floor(top);
+        let yEnd = Math.ceil(top + height);
+
+        for (let y = yStart; y < yEnd; y++) {
+            for (let x = xStart; x < xEnd; x++) {
+                let tile = level.rows[y][x];
+                if (tile === "empty") continue;
+                let screenX = (x - left) * SCALE;
+                let screenY = (y - top) * SCALE;
+                let tileX = tile === "lava" ? SCALE : 0;
+                this.cx.drawImage(otherSprites,
+                    tileX,         0, SCALE, SCALE,
+                    screenX, screenY, SCALE, SCALE);
+            }
+        }
+    }
+
+    drawPlayer(player, x, y, width, height) {
+        width += playerXOverlap * 2;
+        x -= playerXOverlap;
+        if (player.speed.x !== 0) {
+            this.flipPlayer = player.speed.x < 0;
+        }
+
+        let tile = 8;
+        if (player.speed.y !== 0) {
+            tile = 9;
+        } else if (player.speed.x !== 0) {
+            tile = Math.floor(Date.now() / 60) % 8;
+        }
+
+        this.cx.save();
+        if (this.flipPlayer) {
+            flipHorizontally(this.cx, x + width / 2);
+        }
+        let tileX = tile * width;
+        this.cx.drawImage(playerSprites, tileX, 0, width, height,
+            x,     y, width, height);
+        this.cx.restore();
+    };
+
+    drawActors(actors) {
+        for (let actor of actors) {
+            let width = actor.size.x * SCALE;
+            let height = actor.size.y * SCALE;
+            let x = (actor.pos.x - this.viewport.left) * SCALE;
+            let y = (actor.pos.y - this.viewport.top) * SCALE;
+            if (actor.type === "player") {
+                this.drawPlayer(actor, x, y, width, height);
+            } else {
+                let tileX = (actor.type === "coin" ? 2 : 1) * SCALE;
+                this.cx.drawImage(otherSprites,
+                    tileX, 0, width, height,
+                    x,     y, width, height);
+            }
+        }
+    }
+
 };
 
-DOMDisplay.prototype.scrollPlayerIntoView = function(state) {
-  let width = this.dom.clientWidth;
-  let height = this.dom.clientHeight;
-  let margin = width / 3;
-
-  // The viewport
-  let left = this.dom.scrollLeft, right = left + width;
-  let top = this.dom.scrollTop, bottom = top + height;
-
-  let player = state.player;
-  let center = player.pos.plus(player.size.times(0.5))
-                         .times(SCALE);
-
-  if (center.x < left + margin) {
-    this.dom.scrollLeft = center.x - margin;
-  } else if (center.x > right - margin) {
-    this.dom.scrollLeft = center.x + margin - width;
-  }
-  if (center.y < top + margin) {
-    this.dom.scrollTop = center.y - margin;
-  } else if (center.y > bottom - margin) {
-    this.dom.scrollTop = center.y + margin - height;
-  }
-};
 
 function trackKeys(keys) {
     let down = Object.create(null);
