@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Get content</title>
+</head>
+<body>
+<script>
+    const FORMATS = ['text/plain', 'text/html', 'application/json', 'application/rainbows+unicorns'];
+    const RESOURCE = 'http://eloquentjavascript.net/author';
+
+    const printContent = async (format) => {
+        const response = await fetch(RESOURCE, {method: "GET", headers: {'Accept': format}});
+        if (response.status === 200) {
+            const content = await response.text();
+            console.log(`Content-Type: ${response.headers.get("Content-Type")}\nContent: ${content}`);
+        }
+    };
+
+    for (let format of FORMATS) {
+        printContent(format);
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Workbench</title>
+</head>
+<body>
+<textarea id="code" title="Type expressions here">return "hi";</textarea>
+<button id="button">Run</button>
+<pre id="output"></pre>
+
+<script>
+    function evalCode(code) {
+        if (!code || typeof code !== 'string') {
+            return '';
+        }
+        try {
+            return Function(code)();
+        } catch (error) {
+            return `${error}`;
+        }
+    }
+    const codeElem = document.getElementById('code');
+    const outputElem = document.getElementById('output');
+    document.getElementById('button').addEventListener('click', () => {
+        outputElem.textContent = evalCode(codeElem.value);
+    });
+</script>
+</body>
+</html>

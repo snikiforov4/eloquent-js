@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Conway's Game of Life</title>
+    <style>
+        table, th, td {
+            border: 0;
+        }
+        table {
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+    </style>
+</head>
+<body>
+<div id="grid"></div>
+<button id="next">Next generation</button>
+
+<script>
+    const GRID_SIZE = 10;
+    const NEEDED_NEIGHBOURS_FOR_LIVE = 3;
+    function create2DArray(size = 0) {
+        const res = Array(size);
+        for (let i = 0; i < size; i++) {
+            res[i] = Array(size);
+        }
+        return res;
+    }
+    const printXY = (event) => {
+        const x = event.target.getAttribute('data-x');
+        const y = event.target.getAttribute('data-y');
+        console.log(`x=${x}, y=${y}, checked=${event.target.checked}`);
+    };
+
+    function buildGrid() {
+        const gridElem = document.getElementById('grid');
+        let table = document.createElement('table');
+        let grid = create2DArray(GRID_SIZE);
+
+        for (let y = 0; y < GRID_SIZE; y++) {
+            let row = document.createElement("tr");
+            for (let x = 0; x < GRID_SIZE; x++) {
+                let cell = document.createElement("td");
+                let checkbox = document.createElement("input");
+                checkbox.setAttribute('type', 'checkbox');
+                checkbox.setAttribute('data-x', String(x));
+                checkbox.setAttribute('data-y', String(y));
+                checkbox.addEventListener('change', printXY);
+                cell.appendChild(checkbox);
+                row.appendChild(cell);
+                grid[y][x] = checkbox;
+            }
+            table.appendChild(row);
+        }
+        gridElem.appendChild(table);
+        return grid;
+    }
+
+    function fillGridWithLife(matrix, percentage = 0.3) {
+        let citizens = GRID_SIZE * GRID_SIZE * percentage;
+        while (citizens > 0) {
+            let y = Math.floor(Math.random() * matrix.length);
+            let x = Math.floor(Math.random() * matrix[y].length);
+            if (!matrix[y][x].checked) {
+                matrix[y][x].checked = true;
+                citizens--;
+            }
+        }
+
+    }
+
+    const grid = buildGrid();
+    fillGridWithLife(grid, 0.15);
+
+    const nextButton = document.getElementById('next');
+
+    function insideGrid(x, y) {
+        return x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE;
+    }
+
+    function hasEnoughResourcesToLive(checkedX, checkedY) {
+        let aliveNeighbours = 0;
+        for (let x of [-1, 0, 1]) {
+            for (let y of [-1, 0, 1]) {
+                if (x === 0 && y === 0) continue;
+                let neighbourX = checkedX + x;
+                let neighbourY = checkedY + y;
+                if (insideGrid(neighbourX, neighbourY) && grid[neighbourY][neighbourX].checked) {
+                    aliveNeighbours++;
+                }
+            }
+        }
+
+        return aliveNeighbours >= NEEDED_NEIGHBOURS_FOR_LIVE;
+    }
+
+    function forAllCells(action) {
+        for (let y = 0; y < GRID_SIZE; y++) {
+            for (let x = 0; x < GRID_SIZE; x++) {
+                action(grid[y][x], x, y);
+            }
+        }
+    }
+
+    nextButton.addEventListener('click', () => {
+        let deadCells = [];
+        let birthCells = [];
+        forAllCells((cell, x, y) => {
+            if (cell.checked && !hasEnoughResourcesToLive(x, y))
+                deadCells.push(cell);
+        });
+        forAllCells((cell, x, y) => {
+            if (!cell.checked && hasEnoughResourcesToLive(x, y))
+                birthCells.push(cell);
+        });
+        deadCells.forEach(cell => cell.checked = false);
+        birthCells.forEach(cell => cell.checked = true);
+    });
+
+
+</script>
+</body>
+</html>
